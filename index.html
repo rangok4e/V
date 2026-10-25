@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>V I B E . e x e — Collectible Prop Card Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Gaegu:wght@400;700&family=Orbitron:wght@600;800;900&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,700&family=Rubik+Glitch&family=Share+Tech+Mono&family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@400;600;700&family=Sedgwick+Ave+Display&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-cyber: 'Orbitron', sans-serif;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-sans: 'Space Grotesk', sans-serif;
+      --font-typewriter: 'Courier Prime', monospace;
+      --font-comic: 'Gaegu', cursive;
+      --font-pixel: 'Silkscreen', monospace;
+      --font-sig: 'Permanent Marker', cursive;
+      --font-graffiti: 'Sedgwick Ave Display', cursive;
+      --font-cinzel: 'Cinzel', serif;
+      --font-glitch: 'Rubik Glitch', cursive;
+    }
+    .font-cyber { font-family: var(--font-cyber); }
+    .font-mono-tech { font-family: var(--font-mono); }
+    .font-sans-ui { font-family: var(--font-sans); }
+    .font-typewriter { font-family: var(--font-typewriter); }
+    .font-comic { font-family: var(--font-comic); }
+    .font-pixel { font-family: var(--font-pixel); }
+    .font-sig { font-family: var(--font-sig); }
+    .font-graffiti { font-family: var(--font-graffiti); }
+    .font-cinzel { font-family: var(--font-cinzel); }
+    .font-glitch { font-family: var(--font-glitch); }
+
+    /* Eerie Dynamic Ambient Glow */
+    @keyframes eerieCycle {
+      0% { background-color: #06050b; }
+      25% { background-color: #03080d; }
+      50% { background-color: #0d0407; }
+      75% { background-color: #090903; }
+      100% { background-color: #06050b; }
+    }
+
+    body {
+      animation: eerieCycle 24s ease infinite;
+      transition: background-color 3s ease;
+      touch-action: pan-y;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .crt-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+
+    @keyframes glitchJitter {
+      0% { transform: translate(0); }
+      20% { transform: translate(-2px, 2px) skewX(1deg); }
+      40% { transform: translate(-1px, -1px); }
+      60% { transform: translate(2px, 1px) skewY(-0.5deg); }
+      80% { transform: translate(1px, -2px); }
+      100% { transform: translate(0); }
+    }
+    .glitch-hover:hover {
+      animation: glitchJitter 0.25s infinite linear;
+    }
+
+    .scene-viewport {
+      perspective: 1400px;
+    }
+    .card-rig {
+      transform-style: preserve-3d;
+      transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card-face {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .card-face.back {
+      transform: rotateY(180deg);
+    }
+
+    #fx-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Isolated Signature Pad */
+    .sig-zone {
+      touch-action: none !important;
+      user-select: none !important;
+      cursor: crosshair;
+    }
+    .sig-zone canvas {
+      touch-action: none !important;
+      display: block;
+    }
+
+    .card-scale-box {
+      transform-origin: center center;
+      transition: transform 0.2s ease-out;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #07070a; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #f97316; }
+  </style>
+</head>
+<body class="text-zinc-100 min-h-screen flex flex-col font-sans-ui selection:bg-orange-500 selection:text-black overflow-x-hidden relative">
+
+  <!-- Interactive Fluid / Sparkling Cursor Simulation -->
+  <canvas id="fx-canvas"></canvas>
+
+  <!-- CRT Scanline Horror Ambient Overlay -->
+  <div class="crt-overlay fixed inset-0 z-50 pointer-events-none opacity-30"></div>
+
+  <!-- Ambient Dynamic Colored Orb Glow -->
+  <div id="ambientOrb" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] sm:w-[650px] h-[340px] sm:h-[650px] rounded-full blur-[120px] sm:blur-[160px] pointer-events-none opacity-30 transition-all duration-1000 -z-10 bg-purple-600"></div>
+
+  <!-- ========================================================= -->
+  <!-- 1. CINEMATIC BOOT SCREEN                                  -->
+  <!-- ========================================================= -->
+  <div id="introScreen" class="fixed inset-0 z-[100] bg-[#050507] flex flex-col items-center justify-center p-6 select-none transition-all duration-1000 ease-out">
+    <div class="absolute inset-0 bg-[radial-gradient(#1f152b_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none"></div>
+
+    <div class="relative z-10 flex flex-col items-center text-center max-w-xl">
+      <div class="flex items-center gap-2 mb-6 px-3.5 py-1.5 rounded-full border border-red-500/30 bg-red-950/20 backdrop-blur-md">
+        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+        <span class="text-[10px] font-mono-tech tracking-widest text-red-400 uppercase">SIGNAL HARVEST // ENGINE READY</span>
+      </div>
+
+      <h1 class="text-5xl sm:text-8xl font-black font-cyber tracking-[0.2em] sm:tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-300 to-purple-400 mb-2 drop-shadow-[0_0_35px_rgba(168,85,247,0.35)] glitch-hover">
+        V I B E . e x e
+      </h1>
+      <p class="text-xs sm:text-sm font-mono-tech text-zinc-400 tracking-widest mb-10 max-w-md uppercase">
+        Screen-Accurate Collectible Prop Studio & 300 DPI Export Engine
+      </p>
+
+      <!-- Clean Launch Button without text underneath -->
+      <button id="launchBtn" class="group relative px-12 sm:px-14 py-4 rounded-xl bg-gradient-to-r from-purple-700 via-orange-600 to-red-600 hover:from-purple-600 hover:to-orange-500 text-white font-cyber font-black tracking-[0.35em] text-sm shadow-[0_0_40px_rgba(239,68,68,0.35)] hover:shadow-[0_0_65px_rgba(168,85,247,0.7)] transition-all duration-300 transform active:scale-95 cursor-pointer">
+        <span class="relative z-10 flex items-center gap-3">
+          <span>[ LAUNCH ]</span>
+          <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </span>
+      </button>
+
+      <div id="bootLogs" class="hidden mt-8 text-left w-72 sm:w-80 p-3.5 bg-black/95 border border-purple-500/50 rounded-lg font-mono-tech text-[10px] text-purple-300 space-y-1 shadow-2xl">
+        <div>> INITIALIZING GENERATIVE DARK-SYNTH BGM...</div>
+        <div>> ATTACHING HARDWARE POINTER EVENT SIGNATURE ENGINE...</div>
+        <div>> 10 SCREEN-ACCURATE TEMPLATES LOADED // ZERO ERROR.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 2. STUDIO TOP BAR                                         -->
+  <!-- ========================================================= -->
+  <header class="border-b border-zinc-800/80 bg-[#07070b]/90 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-8 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 via-orange-500 to-cyan-500 flex items-center justify-center font-black text-xs text-black font-cyber shadow-lg shadow-purple-500/20">
+        V.e
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold tracking-widest text-sm sm:text-base font-cyber bg-gradient-to-r from-white via-zinc-200 to-purple-400 bg-clip-text text-transparent">
+            V I B E . e x e
+          </span>
+          <span class="hidden sm:inline-block text-[9px] font-mono-tech px-2 py-0.5 rounded border border-purple-500/40 text-purple-400 bg-purple-950/20 uppercase">
+            300 DPI ENGINE
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="audioToggleBtn" title="Toggle Synth Audio" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 text-xs font-mono-tech font-bold transition-all active:scale-95 cursor-pointer">
+        <span id="audioIcon">🔇</span>
+        <span class="hidden sm:inline">SYNTH BGM</span>
+      </button>
+
+      <button id="toolbarFlipBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/40 text-purple-200 text-xs font-mono-tech font-bold transition-all active:scale-95 cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span class="hidden sm:inline">FLIP CARD</span>
+        <span class="sm:hidden">FLIP</span>
+      </button>
+
+      <button id="toolbarPrintBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-black text-xs font-cyber font-bold shadow-lg shadow-purple-600/30 transition-all active:scale-95 cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        <span class="hidden sm:inline">EXPORT PRINT SHEET</span>
+        <span class="sm:hidden">SHEET</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Template Selector Ribbon -->
+  <div class="border-b border-zinc-800/60 bg-[#060609]/95 px-3 sm:px-8 py-2.5 overflow-x-auto flex items-center gap-2.5 no-scrollbar">
+    <span class="text-[10px] font-mono-tech text-zinc-500 uppercase tracking-widest mr-1 whitespace-nowrap flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-purple-500"></span> SELECT PROP:
+    </span>
+    <div id="templateRibbon" class="flex items-center gap-2"></div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 3. MAIN WORKSPACE                                         -->
+  <!-- ========================================================= -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- Left Stage: 3D Parallax Viewport -->
+    <section class="lg:col-span-7 flex flex-col items-center justify-center">
+      <div id="sceneContainer" class="scene-viewport w-full flex flex-col items-center justify-center py-4 min-h-[460px] sm:min-h-[580px] relative overflow-hidden">
+        
+        <!-- Scalable Card Wrapper for Mobile Screens -->
+        <div id="cardScaleBox" class="card-scale-box relative">
+          <!-- The 3D Interactive Card Object -->
+          <div id="cardRig" class="card-rig relative cursor-grab active:cursor-grabbing select-none">
+            <div id="cardFront" class="card-face absolute inset-0 rounded-[18px] overflow-hidden shadow-2xl border border-black/20 flex flex-col justify-between"></div>
+            <div id="cardBack" class="card-face back absolute inset-0 rounded-[18px] overflow-hidden shadow-2xl border border-black/20 flex flex-col justify-between"></div>
+            <div id="glareOverlay" class="absolute inset-0 pointer-events-none rounded-[18px] mix-blend-overlay opacity-30 transition-opacity"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 sm:gap-4 mt-6 text-[10px] sm:text-[11px] font-mono-tech text-zinc-400">
+          <span class="flex items-center gap-1.5"><span class="text-purple-400 font-bold">Tap / Spacebar</span> to flip</span>
+          <span>•</span>
+          <span class="flex items-center gap-1.5"><span class="text-cyan-400 font-bold">Touch / Move</span> for 3D depth</span>
+        </div>
+
+        <!-- Direct 300 DPI Export Action Buttons -->
+        <div class="flex flex-wrap items-center justify-center gap-2 mt-4 w-full">
+          <button id="downloadFrontBtn" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg border border-zinc-700 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 text-xs font-mono-tech font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
+            <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>FRONT (300 DPI)</span>
+          </button>
+          <button id="downloadBackBtn" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg border border-zinc-700 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 text-xs font-mono-tech font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
+            <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>BACK (300 DPI)</span>
+          </button>
+          <button id="downloadPrintSheetBtn" class="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-purple-500/60 bg-gradient-to-r from-purple-950/80 to-purple-900/80 hover:from-purple-900 hover:to-purple-800 text-purple-200 text-xs font-mono-tech font-bold transition-all shadow-lg shadow-purple-900/30 cursor-pointer flex items-center justify-center gap-1.5 active:scale-95">
+            <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            <span>EXPORT PRINT SHEET (Both Sides)</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Controls: Customization Inspector -->
+    <aside class="lg:col-span-5 flex flex-col gap-4">
+      
+      <!-- Photo Personalizer Engine -->
+      <div class="bg-[#0e0f16]/90 border border-zinc-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-mono-tech font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Personal Photo Frame (Neutral Default)
+          </h2>
+          <button id="resetPhotoBtn" class="text-[10px] text-zinc-500 hover:text-red-400 font-mono-tech cursor-pointer">Reset Default</button>
+        </div>
+
+        <label class="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-dashed border-zinc-700 hover:border-purple-500 bg-zinc-900/60 hover:bg-purple-950/20 text-xs text-zinc-300 font-medium cursor-pointer transition-colors mb-3">
+          <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          <span>Upload Image / Portrait (Selfie or Mugshot)</span>
+          <input id="photoInput" type="file" accept="image/*" class="hidden">
+        </label>
+
+        <!-- Live Photo Scale & Pan Sliders -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <span class="text-[10px] font-mono-tech text-zinc-500 block mb-1">ZOOM SCALE (<span id="zoomVal">1.0</span>x)</span>
+            <input id="photoZoomRange" type="range" min="0.5" max="3.0" step="0.05" value="1.0" class="w-full accent-purple-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer">
+          </div>
+          <div>
+            <span class="text-[10px] font-mono-tech text-zinc-500 block mb-1">VERTICAL PAN (<span id="panVal">0</span>px)</span>
+            <input id="photoPanRange" type="range" min="-120" max="120" step="2" value="0" class="w-full accent-purple-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer">
+          </div>
+        </div>
+      </div>
+
+      <!-- Direct In-Place Card Fields -->
+      <div class="bg-[#0e0f16]/90 border border-zinc-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+        <h2 class="text-xs font-mono-tech font-bold uppercase tracking-wider text-zinc-400 mb-2 flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Direct Text & Attribute Customizer
+        </h2>
+        <div id="fieldsContainer" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+      </div>
+
+      <!-- Verified Vector Signature Engine -->
+      <div class="bg-[#0e0f16]/90 border border-zinc-800 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-mono-tech font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            Interactive Signature Pad (Present on All Cards)
+          </h2>
+          <button id="clearSigBtn" class="text-[10px] text-zinc-500 hover:text-red-400 font-mono-tech cursor-pointer">Clear Ink</button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 mb-2.5">
+          <button id="modeDrawBtn" class="py-1 px-2 rounded text-[11px] font-mono-tech font-bold bg-purple-600 text-white cursor-pointer">
+            Draw Ink
+          </button>
+          <button id="modeTypeBtn" class="py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer">
+            Script Font
+          </button>
+          <button id="modeBlankBtn" class="py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer">
+            Real Pen (Blank)
+          </button>
+        </div>
+
+        <div id="drawInkRow" class="flex items-center justify-between">
+          <span class="text-[10px] font-mono-tech text-zinc-500">PEN INK PRESET:</span>
+          <div id="inkPalette" class="flex gap-2"></div>
+        </div>
+
+        <div id="typeSigRow" class="hidden mt-2">
+          <label class="text-[10px] font-mono-tech text-zinc-500 block mb-1">TYPE SIGNATURE TEXT</label>
+          <input id="typedSigInput" type="text" placeholder="Type signature..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-purple-300 font-sig focus:border-purple-500 focus:outline-none">
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- 4. PERMANENT BRANDED FOOTER                               -->
+  <!-- ========================================================= -->
+  <footer class="border-t border-zinc-900/80 bg-[#050508]/95 py-5 px-6 text-xs text-zinc-500 font-mono-tech flex flex-col sm:flex-row items-center justify-between max-w-[1600px] w-full mx-auto relative z-20 gap-3">
+    <div class="flex items-center gap-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span>V I B E . e x e // 1:1 REPLICA PROP ENGINE</span>
+    </div>
+
+    <div class="flex items-center gap-2 text-zinc-400 text-sm font-semibold tracking-wider">
+      <span>~by</span>
+      <span class="text-zinc-100 font-bold font-cyber">kartik gupta</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span>Curated & Directed:</span>
+      <a href="https://instagram.com/thekartikflow" target="_blank" rel="noopener noreferrer" class="text-orange-400 hover:text-orange-300 font-bold transition-colors">
+        @thekartikflow
+      </a>
+      <span>•</span>
+      <a href="https://instagram.com/73puzzle" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 font-bold transition-colors">
+        @73puzzle
+      </a>
+    </div>
+  </footer>
+
+  <script>
+    // Universal 10-Card Master Catalog - Every Card Explicitly Features a Signature Pad on its Design
+    const TEMPLATES = [
+      {
+        id: 'sreerag-creative',
+        name: 'CREATIVE LICENSE',
+        badge: 'SR-0051',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#38bdf8',
+        inkColor: '#1d4ed8',
+        sigFace: 'front', // Primary on Front
+        fields: {
+          licenseNo: '0 0 5 1',
+          name: 'SREERAG',
+          occupation: 'UNEMPLOYED',
+          dob: '15/09/2006',
+          nationality: 'INDIAN',
+          role: 'GRAPHIC USER',
+          expertise: '3D ARTIST & VISUAL DESIGNER',
+          quote: 'Creativity takes courage. - Henri Matisse',
+          phone: '+91 94960 33887',
+          email: 'xyncatalyst51@gmail.com',
+          insta: '@sreerag_os',
+          sigName: 'Sreerag'
+        }
+      },
+      {
+        id: 'portfolio-barbwire',
+        name: 'PORTFOLIO DELULU ID',
+        badge: 'BARBWIRE',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#f43f5e',
+        inkColor: '#111827',
+        sigFace: 'front', // Prominent bottom-left signature on front
+        fields: {
+          idNo: '#S1LLY1C0N',
+          subNo: '#2/2',
+          name: 'DAN',
+          dob: '**/**/09',
+          pronouns: 'HE/HIM',
+          position: 'DELULU®',
+          subPosition: '(manager)',
+          warning: '*the manufacture of this card is prohibited*',
+          date: 'March 31, 2026',
+          sigName: 'Dan Kim'
+        }
+      },
+      {
+        id: 'tyler-album-cmiygl',
+        name: 'TYLER CMIYGL PASSPORT',
+        badge: 'IGOR/GOBLIN',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#fbbf24',
+        inkColor: '#111111',
+        sigFace: 'both', // Tyler Baudelaire signature on front and reverse
+        fields: {
+          header: 'PERMANENT LICENSE OF TRAVEL',
+          licenseNo: 'NO. TTC6252021',
+          name: 'Tyler Baudelaire',
+          dob: '03/06/91',
+          place: 'Hawthorne, CA',
+          issueDate: '06/25/2021',
+          sigName: 'Tyler'
+        }
+      },
+      {
+        id: 'viet-student-card',
+        name: 'VIETNAM STUDENT ID',
+        badge: '11B15',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#ef4444',
+        inkColor: '#111827',
+        sigFace: 'both', // Both front signature slot and back verification
+        fields: {
+          header: 'STUDENT CARD',
+          tag: 'TP-ER',
+          idCode: 'ID: 20242027TP',
+          name: 'Trần Hà My',
+          grade: '11',
+          className: '11B15',
+          slogan: 'THÁI ĐỘ HƠN TRÌNH ĐỘ NHA EM',
+          sigName: 'Trần Hà My'
+        }
+      },
+      {
+        id: 'browser-os-student',
+        name: 'Y2K BROWSER OS ID',
+        badge: 'TAPAK SUCI',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#38bdf8',
+        inkColor: '#0369a1',
+        sigFace: 'both',
+        fields: {
+          searchQuery: 'PENDIDIKAN DASAR TAPAK SUCI',
+          nickname: 'Ikmal',
+          program: 'Sports Science',
+          group: 'HISYAM ROIF IKMALUDDI. ---GROUP 3',
+          quote: '"dengan iman dan akhlak saya menjadi kuat, tanpa iman dan akhlak saya menjadi lemah"',
+          constellation: 'SAGITTARIUS',
+          hight: "174 CM",
+          blood: 'O POSITIVE',
+          barcodeNum: '00000000000000000000000000000000000000000000',
+          sigName: 'Ikmal'
+        }
+      },
+      {
+        id: 'wbb-license',
+        name: 'WE BARE BEARS DL',
+        badge: 'ICE BEAR',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#38bdf8',
+        inkColor: '#1e293b',
+        sigFace: 'both',
+        fields: {
+          state: 'CALIFORNIA',
+          title: 'Driver License',
+          ln: 'BEAR',
+          fn: 'ICE',
+          dob: 'UNKNOWN',
+          h: "6'2\"",
+          w: '590 lbs',
+          gender: 'M',
+          hair: 'WHITE',
+          eyes: 'DOT',
+          sigName: 'Ice Bear'
+        }
+      },
+      {
+        id: 'soupasta-id',
+        name: 'SOUPASTA Y2K ID',
+        badge: 'PIXEL BIT',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#ea580c',
+        inkColor: '#ea580c',
+        sigFace: 'both',
+        fields: {
+          header: 'IDENTITY CARD',
+          surname: 'KIM',
+          stageName: 'JUHOON',
+          name: 'JU HOON',
+          dob: '03/01/2008',
+          sex: 'M',
+          eyes: 'BROWN',
+          height: '176cm (5\'9")',
+          issueDate: '01/01/2027',
+          brandTag: 'DESIGNED BY CRESCENDO',
+          sigName: 'JKM'
+        }
+      },
+      {
+        id: 'stark-hud',
+        name: 'STARK INDUSTRIES KEY',
+        badge: 'MARK VII',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#00f0ff',
+        inkColor: '#00f0ff',
+        sigFace: 'both',
+        fields: {
+          corp: 'STARK INDUSTRIES',
+          division: 'AVENGERS FACILITY ACCESS',
+          cardholder: 'TONY STARK',
+          level: 'CLEARANCE: OMEGA',
+          arcTelemetry: 'ARC CORE FREQ: 98.4 GHz',
+          sigName: 'Anthony Stark'
+        }
+      },
+      {
+        id: 'shield-badge',
+        name: 'S.H.I.E.L.D. ID BADGE',
+        badge: 'LEVEL 10',
+        orientation: 'landscape',
+        width: 480,
+        height: 310,
+        glowColor: '#3b82f6',
+        inkColor: '#1e3a8a',
+        sigFace: 'both',
+        fields: {
+          agency: 'STRATEGIC HOMELAND INTERVENTION',
+          division: 'ENFORCEMENT & LOGISTICS DIVISION',
+          agentName: 'PHILIP J. COULSON',
+          clearance: 'LEVEL 10 // CLASSIFIED',
+          agentId: 'AGENT: 2684-T',
+          sigName: 'Nick Fury'
+        }
+      },
+      {
+        id: 'loki-tva',
+        name: 'LOKI TVA ACCESS',
+        badge: 'DOOMSDAY',
+        orientation: 'portrait',
+        width: 330,
+        height: 500,
+        glowColor: '#e86024',
+        inkColor: '#e86024',
+        sigFace: 'both',
+        fields: {
+          header: 'TIME VARIANCE AUTHORITY',
+          badgeVal: 'L1130',
+          name: 'LOKI LAUFEYSON',
+          subHeader: 'SEC: 09 // REV-401/20',
+          sigName: 'Judge Renslayer'
+        }
+      }
+    ];
+
+    const INK_PRESETS = [
+      { color: '#111827', name: 'Sharpie Black' },
+      { color: '#1d4ed8', name: 'Ballpoint Blue' },
+      { color: '#ea580c', name: 'Pixel Orange' },
+      { color: '#e86024', name: 'TVA Copper' },
+      { color: '#00f0ff', name: 'Stark Cyan' },
+      { color: '#dc2626', name: 'Crimson Blood' }
+    ];
+
+    // Engine State
+    let currentTemplate = TEMPLATES[0];
+    let isFlipped = false;
+    let customPhotoImg = null;
+    let customPhotoUrl = null;
+    let photoZoom = 1.0;
+    let photoPan = 0;
+    let sigMode = 'draw';
+    let currentInk = currentTemplate.inkColor;
+    let typedSignature = currentTemplate.fields.sigName;
+    
+    // Persistent Vector Stroke Bank indexed by Template ID
+    const signatureStore = {};
+    TEMPLATES.forEach(t => { signatureStore[t.id] = []; });
+
+    let isPointerDrawing = false;
+
+    // Generative Web Audio Synthesizer State
+    let audioCtx = null;
+    let isAudioPlaying = false;
+    let synthNodes = null;
+
+    // DOM Elements
+    const introScreen = document.getElementById('introScreen');
+    const launchBtn = document.getElementById('launchBtn');
+    const bootLogs = document.getElementById('bootLogs');
+    const templateRibbon = document.getElementById('templateRibbon');
+    const cardScaleBox = document.getElementById('cardScaleBox');
+    const cardRig = document.getElementById('cardRig');
+    const cardFront = document.getElementById('cardFront');
+    const cardBack = document.getElementById('cardBack');
+    const ambientOrb = document.getElementById('ambientOrb');
+    const glareOverlay = document.getElementById('glareOverlay');
+    const audioToggleBtn = document.getElementById('audioToggleBtn');
+    const audioIcon = document.getElementById('audioIcon');
+
+    const toolbarFlipBtn = document.getElementById('toolbarFlipBtn');
+    const toolbarPrintBtn = document.getElementById('toolbarPrintBtn');
+    const downloadFrontBtn = document.getElementById('downloadFrontBtn');
+    const downloadBackBtn = document.getElementById('downloadBackBtn');
+    const downloadPrintSheetBtn = document.getElementById('downloadPrintSheetBtn');
+
+    const photoInput = document.getElementById('photoInput');
+    const resetPhotoBtn = document.getElementById('resetPhotoBtn');
+    const photoZoomRange = document.getElementById('photoZoomRange');
+    const photoPanRange = document.getElementById('photoPanRange');
+    const zoomVal = document.getElementById('zoomVal');
+    const panVal = document.getElementById('panVal');
+    const fieldsContainer = document.getElementById('fieldsContainer');
+
+    const modeDrawBtn = document.getElementById('modeDrawBtn');
+    const modeTypeBtn = document.getElementById('modeTypeBtn');
+    const modeBlankBtn = document.getElementById('modeBlankBtn');
+    const drawInkRow = document.getElementById('drawInkRow');
+    const typeSigRow = document.getElementById('typeSigRow');
+    const typedSigInput = document.getElementById('typedSigInput');
+    const clearSigBtn = document.getElementById('clearSigBtn');
+    const inkPalette = document.getElementById('inkPalette');
+
+    // =========================================================
+    // AUDIO SYNTHESIZER ENGINE
+    // =========================================================
+    function initSynthAudio() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (synthNodes) return;
+
+        const masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.07, audioCtx.currentTime);
+
+        const osc1 = audioCtx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(55, audioCtx.currentTime);
+
+        const osc2 = audioCtx.createOscillator();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(82.4, audioCtx.currentTime);
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(320, audioCtx.currentTime);
+        filter.Q.setValueAtTime(4.0, audioCtx.currentTime);
+
+        const lfo = audioCtx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.18, audioCtx.currentTime);
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.setValueAtTime(140, audioCtx.currentTime);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(masterGain);
+        masterGain.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        lfo.start();
+
+        synthNodes = { osc1, osc2, lfo, masterGain, filter };
+        isAudioPlaying = true;
+        audioIcon.textContent = '🔊';
+      } catch (err) {
+        console.warn('Audio init bypassed:', err);
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx || !synthNodes) {
+        initSynthAudio();
+        return;
+      }
+      if (isAudioPlaying) {
+        synthNodes.masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        isAudioPlaying = false;
+        audioIcon.textContent = '🔇';
+      } else {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        synthNodes.masterGain.gain.setTargetAtTime(0.07, audioCtx.currentTime, 0.05);
+        isAudioPlaying = true;
+        audioIcon.textContent = '🔊';
+      }
+    }
+    audioToggleBtn.addEventListener('click', toggleAudio);
+
+    function playSfx(type = 'click') {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const t = audioCtx.currentTime;
+        if (type === 'launch') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(60, t);
+          osc.frequency.exponentialRampToValueAtTime(380, t + 0.45);
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + 0.6);
+        } else if (type === 'flip') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(280, t);
+          osc.frequency.exponentialRampToValueAtTime(90, t + 0.14);
+          gain.gain.setValueAtTime(0.18, t);
+          gain.gain.linearRampToValueAtTime(0.001, t + 0.14);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + 0.14);
+        }
+      } catch (e) {}
+    }
+
+    // Launch Sequence
+    launchBtn.addEventListener('click', () => {
+      playSfx('launch');
+      initSynthAudio();
+      bootLogs.classList.remove('hidden');
+      launchBtn.disabled = true;
+      launchBtn.classList.add('scale-95', 'opacity-70');
+
+      setTimeout(() => {
+        introScreen.classList.add('opacity-0', 'scale-105', 'pointer-events-none');
+        setTimeout(() => {
+          introScreen.style.display = 'none';
+          adjustCardMobileScale();
+        }, 800);
+      }, 700);
+    });
+
+    // Mobile Responsive Auto-Scaler
+    function adjustCardMobileScale() {
+      const container = document.getElementById('sceneContainer');
+      if (!container || !currentTemplate) return;
+      const availableW = container.clientWidth - 24;
+      const cardW = currentTemplate.width;
+      if (availableW < cardW) {
+        const factor = availableW / cardW;
+        cardScaleBox.style.transform = `scale(${factor})`;
+      } else {
+        cardScaleBox.style.transform = 'scale(1)';
+      }
+    }
+    window.addEventListener('resize', adjustCardMobileScale);
+
+    // Stardust Cursor Trail Simulation
+    const fxCanvas = document.getElementById('fx-canvas');
+    const curCtx = fxCanvas.getContext('2d');
+    let particles = [];
+
+    function resizeFxCanvas() {
+      fxCanvas.width = window.innerWidth;
+      fxCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeFxCanvas);
+    resizeFxCanvas();
+
+    function addParticles(x, y) {
+      for (let i = 0; i < 2; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 2.2,
+          vy: (Math.random() - 0.5) * 2.2,
+          size: Math.random() * 2.5 + 1,
+          color: Math.random() > 0.5 ? '#a855f7' : (Math.random() > 0.5 ? '#f97316' : '#00f0ff'),
+          alpha: 1
+        });
+      }
+    }
+    window.addEventListener('mousemove', (e) => addParticles(e.clientX, e.clientY));
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches[0]) addParticles(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+
+    function loopFx() {
+      curCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.03;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        curCtx.save();
+        curCtx.globalAlpha = p.alpha;
+        curCtx.fillStyle = p.color;
+        curCtx.beginPath();
+        curCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        curCtx.fill();
+        curCtx.restore();
+      }
+      requestAnimationFrame(loopFx);
+    }
+    loopFx();
+
+    // Template Ribbon
+    function renderRibbon() {
+      templateRibbon.innerHTML = '';
+      TEMPLATES.forEach(tmpl => {
+        const btn = document.createElement('button');
+        const isActive = tmpl.id === currentTemplate.id;
+        btn.className = `px-3 py-1.5 rounded-lg text-xs font-mono-tech whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+          isActive 
+            ? 'border border-purple-500 bg-purple-950/70 text-purple-200 font-bold shadow-lg shadow-purple-600/30' 
+            : 'border border-zinc-800 bg-zinc-900/70 hover:bg-zinc-800 text-zinc-400'
+        }`;
+        btn.innerHTML = `<span>${tmpl.name}</span> <span class="text-[9px] px-1 py-0.2 rounded bg-black/60 text-zinc-400 font-bold">${tmpl.badge}</span>`;
+        btn.onclick = () => selectTemplate(tmpl);
+        templateRibbon.appendChild(btn);
+      });
+    }
+
+    function selectTemplate(tmpl) {
+      playSfx('click');
+      currentTemplate = tmpl;
+      ambientOrb.style.backgroundColor = tmpl.glowColor;
+      currentInk = tmpl.inkColor;
+      typedSignature = tmpl.fields.sigName || 'Authorized';
+      typedSigInput.value = typedSignature;
+
+      cardRig.style.width = tmpl.width + 'px';
+      cardRig.style.height = tmpl.height + 'px';
+
+      renderRibbon();
+      renderFields();
+      initPalette();
+      renderCardDOM();
+      adjustCardMobileScale();
+    }
+
+    function getPhotoElement(stylePreset = 'clean') {
+      if (customPhotoUrl) {
+        return `
+          <img src="${customPhotoUrl}" class="w-full h-full object-cover transition-transform" 
+            style="transform: scale(${photoZoom}) translateY(${photoPan}px);">
+        `;
+      }
+      if (stylePreset === 'bear') {
+        return `
+          <div class="w-full h-full bg-[#38bdf8] flex flex-col items-center justify-center cursor-pointer group" onclick="document.getElementById('photoInput').click()">
+            <svg class="w-16 h-20 text-white drop-shadow-md" viewBox="0 0 100 120" fill="currentColor">
+              <circle cx="28" cy="22" r="12" />
+              <circle cx="72" cy="22" r="12" />
+              <path d="M 20 120 C 18 55, 30 25, 50 25 C 70 25, 82 55, 80 120 Z" />
+              <circle cx="38" cy="60" r="3" fill="#000" />
+              <circle cx="62" cy="60" r="3" fill="#000" />
+              <ellipse cx="50" cy="68" rx="7" ry="4" fill="#000" />
+            </svg>
+            <span class="text-[8px] font-comic font-bold text-sky-950 uppercase mt-1 tracking-wider">[ CLICK TO REPLACE PHOTO ]</span>
+          </div>
+        `;
+      }
+      return `
+        <div class="w-full h-full bg-[#181920] flex flex-col items-center justify-center text-zinc-500 cursor-pointer group p-2 text-center" onclick="document.getElementById('photoInput').click()">
+          <svg class="w-8 h-8 text-zinc-500 group-hover:text-purple-400 transition-colors mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <span class="text-[8px] font-mono-tech text-zinc-400 uppercase tracking-wider">[ UPLOAD PHOTO ]</span>
+        </div>
+      `;
+    }
+
+    // =========================================================
+    // DOM PREVIEW OF ALL 10 CARDS (EVERY CARD HAS A SIGNATURE ZONE)
+    // =========================================================
+    function renderCardDOM() {
+      const f = currentTemplate.fields;
+
+      // 1. SREERAG CREATIVE LICENSE (SR-0051)
+      if (currentTemplate.id === 'sreerag-creative') {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#fbf7f0] text-[#111827] p-3.5 flex flex-col justify-between border-2 border-dashed border-zinc-500 rounded-[18px] shadow-2xl font-mono-tech overflow-hidden">
+            <div class="flex justify-between items-center text-sky-600 font-black text-sm px-1">
+              <span>★ ★ ★ ★ ★</span>
+              <div class="text-right">
+                <span class="text-[8px] text-zinc-500 block"># OF LICENSE</span>
+                <span class="text-base text-red-600 font-bold tracking-widest">${f.licenseNo}</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2.5 my-auto items-center">
+              <div class="col-span-5 h-[160px] border-2 border-black rounded overflow-hidden bg-zinc-200">
+                ${getPhotoElement('clean')}
+              </div>
+              <div class="col-span-7 space-y-1 text-[9px] leading-tight">
+                <div class="text-2xl font-black font-cyber tracking-tight text-black">CREATIVE</div>
+                <div class="text-xs font-bold text-zinc-700 tracking-wider -mt-1 mb-1">LICENSE</div>
+                
+                <!-- Explicit Front Signature Box -->
+                <div class="border border-zinc-400 bg-white/90 p-1 rounded">
+                  <span class="text-[7.5px] text-zinc-500 block uppercase">Signature of Authorized Creative:</span>
+                  <div class="sig-zone w-full h-8 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-1 pt-1">
+                  <div><span class="text-[7.5px] text-zinc-500 block">First Name</span><b>${f.name}</b></div>
+                  <div><span class="text-[7.5px] text-zinc-500 block">Occupation</span><b class="text-red-600">${f.occupation}</b></div>
+                  <div><span class="text-[7.5px] text-zinc-500 block">D.O.B</span><b>${f.dob}</b></div>
+                  <div><span class="text-[7.5px] text-zinc-500 block">Nationality</span><b>${f.nationality}</b></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-black text-white px-2 py-1 rounded flex justify-between items-center text-[9px] font-black tracking-wider">
+              <span>${f.role}</span>
+              <span class="text-zinc-300 font-normal text-[8px] truncate">${f.expertise}</span>
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#fbf7f0] text-[#111827] p-4 flex flex-col justify-between border-2 border-dashed border-zinc-500 rounded-[18px] shadow-2xl font-mono-tech overflow-hidden">
+            <div class="flex justify-between items-center border-b border-zinc-400 pb-1 text-[9px]">
+              <span class="italic font-bold">${f.quote}</span>
+              <span class="bg-yellow-300 text-black px-1.5 py-0.5 rounded text-[8px] font-black">NO SUBSTITUTE</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 my-auto text-[8.5px]">
+              <div>
+                <span class="text-[7.5px] text-zinc-500 block mb-0.5">Software Credentials:</span>
+                <p class="font-bold text-zinc-800">Adobe Photoshop<br>Adobe After Effects<br>Autodesk Maya<br>Blender 3D</p>
+              </div>
+              <div class="text-right">
+                <span class="text-[7.5px] text-zinc-500 block mb-0.5">Direct Contact:</span>
+                <p>PH: ${f.phone}<br>Gmail: ${f.email}<br>INS: ${f.insta}</p>
+              </div>
+            </div>
+            <div class="w-full">
+              <span class="text-[8px] text-zinc-600 uppercase block mb-0.5">REVERSE VERIFICATION SIGNATURE:</span>
+              <div class="sig-zone w-full h-10 bg-white border border-zinc-400 rounded relative overflow-hidden" data-sig-tag="back"></div>
+            </div>
+          </div>
+        `;
+      }
+      // 2. PORTFOLIO DELULU ID (BARBWIRE)
+      else if (currentTemplate.id === 'portfolio-barbwire') {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#faf7ee] text-[#111827] p-3 flex flex-col justify-between border-2 border-zinc-300 rounded-[18px] shadow-2xl font-mono-tech overflow-hidden">
+            <div class="flex justify-between items-start">
+              <div class="text-[8.5px]">
+                <div>ID: <b class="text-pink-600">${f.idNo}</b></div>
+                <div>No: <b>${f.subNo}</b></div>
+              </div>
+              <div class="text-3xl font-black font-graffiti text-pink-400 tracking-wider">
+                Portfolio
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2.5 my-auto items-center">
+              <div class="col-span-5 h-[155px] border-2 border-black rounded overflow-hidden bg-zinc-200">
+                ${getPhotoElement('clean')}
+              </div>
+              <div class="col-span-7 space-y-1.5 text-[9.5px]">
+                <div class="grid grid-cols-2 gap-1">
+                  <div><span class="text-[7.5px] text-zinc-500 block">name:</span><b class="text-sm">${f.name}</b></div>
+                  <div><span class="text-[7.5px] text-zinc-500 block">date of birth:</span><b>${f.dob}</b></div>
+                  <div><span class="text-[7.5px] text-zinc-500 block">pronouns:</span><b>${f.pronouns}</b></div>
+                  <div><span class="text-[7.5px] text-zinc-500 block">position:</span><b class="text-pink-600">${f.position}</b> <span class="text-[8px]">${f.subPosition}</span></div>
+                </div>
+
+                <!-- Direct Front Signature Box -->
+                <div class="border-t border-b border-zinc-300 py-1">
+                  <span class="text-[7.5px] text-zinc-500 block">Authorized Signature:</span>
+                  <div class="sig-zone w-full h-8 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center text-[7.5px] font-bold text-red-600">
+              <span>${f.warning}</span>
+              <span class="text-zinc-600">${f.date}</span>
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#faf7ee] text-[#111827] p-3 flex flex-col justify-between border-2 border-zinc-300 rounded-[18px] shadow-2xl font-mono-tech overflow-hidden">
+            <!-- Screen-accurate Barbwire Graphic overlay -->
+            <div class="my-auto flex flex-col items-center justify-center relative">
+              <div class="text-5xl font-black font-graffiti text-pink-300 select-none">Portfolio</div>
+              <div class="text-xs text-zinc-700 tracking-widest font-black select-none -mt-3">✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦</div>
+            </div>
+            <div class="w-full">
+              <span class="text-[8px] text-zinc-600 uppercase block mb-0.5">REVERSE CERTIFICATION INK:</span>
+              <div class="sig-zone w-full h-11 bg-white border border-zinc-400 rounded relative overflow-hidden" data-sig-tag="back"></div>
+            </div>
+          </div>
+        `;
+      }
+      // 3. TYLER CMIYGL PASSPORT
+      else if (currentTemplate.id === 'tyler-album-cmiygl') {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#fbf6ea] text-[#1c1917] p-3 flex flex-col justify-between font-typewriter border-2 border-black rounded-[18px] shadow-2xl overflow-hidden">
+            <div class="relative z-10 flex justify-between items-start pr-2">
+              <span class="text-[7.5px] font-bold text-zinc-600">TRAVEL STAMPS: 2011 - PRESENT DAY</span>
+              <div class="text-right">
+                <div class="text-[8px] font-bold tracking-wider">${f.header}</div>
+                <div class="text-xs font-black">${f.licenseNo}</div>
+              </div>
+            </div>
+            <div class="relative z-10 grid grid-cols-12 gap-3 my-auto items-center px-1">
+              <div class="col-span-5 h-[155px] border-2 border-black rounded-sm overflow-hidden bg-zinc-200">
+                ${getPhotoElement('clean')}
+              </div>
+              <div class="col-span-7 space-y-1 text-[9px] leading-tight">
+                <div>Issued to: <b class="underline">${f.name}</b></div>
+                <div>Date of birth: <b>${f.dob}</b></div>
+                <div>Place of issue: <b>${f.place}</b></div>
+                <div>Date of issue: <b>${f.issueDate}</b></div>
+                <p class="text-[7.5px] text-zinc-600 leading-tight mt-1 pt-1 border-t border-zinc-400">
+                  This is to Certify that the person named above is permitted to travel freely unless detained by law.
+                </p>
+                <!-- Interactive Front Signature Zone -->
+                <div class="pt-1">
+                  <span class="text-[8px] text-zinc-500 block">SIGNATURE OF AUTHORIZED TRAVELER:</span>
+                  <div class="sig-zone w-full h-8 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                </div>
+              </div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+              <div class="border-4 border-cyan-600 text-cyan-800 font-cyber font-black text-xs px-4 py-1.5 rounded-full rotate-[-12deg]">
+                CALL ME IF YOU GET LOST
+              </div>
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#fbf6ea] text-[#1c1917] p-3 flex flex-col justify-between font-typewriter border-2 border-black rounded-[18px] shadow-2xl overflow-hidden">
+            <div class="relative z-10 flex justify-between items-start pt-1">
+              <div class="font-cyber font-black text-4xl text-[#ec4899] transform -rotate-6 tracking-widest select-none">IGOR</div>
+              <div class="w-12 h-12 rounded-full border-2 border-[#ef4444] text-[#ef4444] flex items-center justify-center font-bold text-xl select-none">☻</div>
+            </div>
+            <div class="relative z-10 flex justify-between items-center my-auto px-2">
+              <div class="font-cyber font-black text-3xl text-[#16a34a] transform rotate-3 tracking-widest select-none">GOBLIN</div>
+              <div class="border-2 border-blue-600 text-blue-800 font-bold text-[9px] px-2 py-1 rounded-full transform -rotate-12 select-none">CALL ME IF YOU GET LOST</div>
+            </div>
+            <div class="relative z-10 w-full pt-1">
+              <div class="flex justify-between items-center mb-0.5 text-[8px] text-zinc-600 uppercase">
+                <span>OFFICIAL AUTHORIZED TRAVELER SIGNATURE</span>
+                <span class="text-orange-600 font-bold">FLOWER BOY 🐝</span>
+              </div>
+              <div class="sig-zone w-full h-11 bg-white border border-zinc-400 rounded relative overflow-hidden" data-sig-tag="back"></div>
+            </div>
+          </div>
+        `;
+      }
+      // 4. VIETNAM STUDENT CARD
+      else if (currentTemplate.id === 'viet-student-card') {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#fbf6ec] text-[#1c1917] p-3 flex flex-col justify-between border-2 border-black rounded-[18px] shadow-2xl overflow-hidden font-sans">
+            <div class="relative z-10 flex justify-between items-start">
+              <div class="flex items-center gap-1.5">
+                <div class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center font-bold text-[9px]">TP</div>
+                <span class="text-[8px] font-mono-tech font-bold text-zinc-700 uppercase">MEDIA // STUDENT CARD</span>
+              </div>
+              <div class="text-right">
+                <span class="font-cyber font-black text-xs tracking-wider text-black">${f.header}</span>
+              </div>
+            </div>
+
+            <div class="relative z-10 grid grid-cols-12 gap-2 my-auto items-center">
+              <div class="col-span-4 h-[160px] relative">
+                <div class="w-full h-full border-2 border-black rounded bg-zinc-300 overflow-hidden shadow-sm">
+                  ${getPhotoElement('clean')}
+                </div>
+                <div class="mt-1 bg-black text-emerald-400 font-mono-tech text-[8.5px] px-1 py-0.5 rounded text-center font-bold">
+                  ${f.idCode}
+                </div>
+              </div>
+
+              <div class="col-span-7 space-y-1.5 pl-1">
+                <div class="text-3xl font-graffiti font-black text-[#dc2626] tracking-wider drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] -rotate-2">
+                  ID CARD
+                </div>
+                <div class="bg-[#f472b6] text-black px-2 py-0.5 rounded border border-black flex justify-between items-center text-[10px] font-black uppercase">
+                  <span>NAME:</span>
+                  <span class="text-xs font-bold">${f.name}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1 items-center pt-0.5 text-[9px] font-bold">
+                  <div><span class="text-[7.5px] text-zinc-500 block">CLASS</span><span class="bg-[#2563eb] text-white px-2 py-0.5 rounded-full text-xs font-black inline-block">${f.className}</span></div>
+                  <div>
+                    <span class="text-[7.5px] text-zinc-500 block">SIGNATURE</span>
+                    <div class="sig-zone w-full h-7 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-1 flex items-center justify-center">
+                <span class="font-cyber font-black text-xs text-yellow-500 tracking-widest -rotate-90 select-none block whitespace-nowrap drop-shadow-[1px_1px_0px_#000]">
+                  ${f.tag}
+                </span>
+              </div>
+            </div>
+
+            <div class="relative z-10 bg-[#16a34a] text-white px-2 py-1 rounded flex justify-between items-center border border-black text-[9px] font-black tracking-wider">
+              <span class="bg-black text-white px-1.5 py-0.2 rounded text-[7.5px]">SLOGAN</span>
+              <span class="truncate px-2">${f.slogan}</span>
+              <span class="text-sm">🐥</span>
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#fbf6ec] text-[#1c1917] p-4 flex flex-col justify-between border-2 border-black rounded-[18px] shadow-2xl overflow-hidden font-sans">
+            <div class="flex justify-between items-center border-b border-black pb-1 text-[9px] font-mono-tech font-bold">
+              <span>TRƯỜNG TRUNG HỌC PHỔ THÔNG // TP-MEDIA</span>
+              <span class="text-red-600">OFFICIAL STUDENT CERTIFIED</span>
+            </div>
+            <div class="my-auto flex flex-col items-center justify-center text-center">
+              <div class="text-4xl font-graffiti text-red-600 drop-shadow-[2px_2px_0px_#000] mb-1">TP-MEDIA</div>
+              <div class="text-xs font-bold text-zinc-800 uppercase tracking-widest">${f.slogan}</div>
+            </div>
+            <div class="w-full">
+              <span class="text-[8px] font-mono-tech text-zinc-600 uppercase block mb-0.5">XÁC NHẬN CHỮ KÝ HỌC SINH (STUDENT SIGNATURE):</span>
+              <div class="sig-zone w-full h-11 bg-white border border-black rounded relative overflow-hidden" data-sig-tag="back"></div>
+            </div>
+          </div>
+        `;
+      }
+      // 5. Y2K BROWSER OS
+      else if (currentTemplate.id === 'browser-os-student') {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#0284c7] text-[#111827] p-2.5 flex flex-col justify-between border-4 border-[#0369a1] rounded-[18px] shadow-2xl overflow-hidden font-mono-tech">
+            <div class="bg-[#f0f9ff] px-2 py-1 rounded-t flex items-center justify-between border-b-2 border-[#0284c7]">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 border border-black"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 border border-black"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-green-500 border border-black"></span>
+              </div>
+              <div class="flex-1 mx-2 bg-white border border-zinc-400 rounded-full px-2 py-0.2 flex items-center gap-1 text-[8px] font-sans text-zinc-700">
+                <span>🔍</span><span class="font-bold truncate">${f.searchQuery}</span>
+              </div>
+              <div class="text-[9px] font-bold">🎀 ❎</div>
+            </div>
+
+            <div class="bg-[#bae6fd] p-2 rounded-b grid grid-cols-12 gap-2 my-auto items-center">
+              <div class="col-span-5 relative">
+                <div class="w-full h-[155px] border-2 border-[#ea580c] rounded bg-white overflow-hidden shadow-inner">
+                  ${getPhotoElement('clean')}
+                </div>
+              </div>
+
+              <div class="col-span-7 space-y-1 text-[8.5px]">
+                <div class="bg-[#0369a1] text-white px-1.5 py-0.5 rounded text-[8px] font-bold truncate">${f.group}</div>
+                <div class="bg-white/90 p-1 rounded border border-sky-400 text-[8px] leading-tight">
+                  <div>NICKNAME: <b class="text-sky-900">${f.nickname}</b></div>
+                  <div>STUDY: <b class="text-sky-900">${f.program}</b></div>
+                </div>
+                <!-- Interactive Front Signature Zone -->
+                <div class="bg-white/90 p-1 rounded border border-sky-400">
+                  <span class="text-[7.5px] text-zinc-600 block">DIGITAL ID VERIFICATION:</span>
+                  <div class="sig-zone w-full h-8 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white/95 px-2 py-0.5 rounded flex justify-between items-center text-[7.5px] text-zinc-600 font-pixel">
+              <span>Loading... ${f.barcodeNum.substring(0, 20)}</span>
+              <span class="text-sky-700 font-bold">100% COMPLETE</span>
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#0284c7] text-[#111827] p-3 flex flex-col justify-between border-4 border-[#0369a1] rounded-[18px] shadow-2xl overflow-hidden font-mono-tech">
+            <div class="bg-[#f0f9ff] px-2 py-1 rounded flex items-center justify-between text-[8px] font-bold">
+              <span>TAPAK SUCI OFFICIAL STUDENT CREDENTIALS</span>
+              <span>OS // REVERSE</span>
+            </div>
+            <div class="my-auto flex flex-col items-center justify-center text-center text-white">
+              <div class="text-3xl font-pixel text-yellow-300">★ ★ ★ ★ ★</div>
+              <div class="text-sm font-bold mt-1">${f.searchQuery}</div>
+            </div>
+            <div class="w-full">
+              <span class="text-[7.5px] text-white uppercase block mb-0.5">AUTHENTICATED DIGITAL SIGNATURE:</span>
+              <div class="sig-zone w-full h-11 bg-white border border-black rounded relative overflow-hidden" data-sig-tag="back"></div>
+            </div>
+          </div>
+        `;
+      }
+      // 6. WE BARE BEARS DL
+      else if (currentTemplate.id === 'wbb-license') {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#fcf9ee] text-[#1c1d1f] p-4 flex flex-col justify-between font-comic border-2 border-zinc-900 rounded-[18px] overflow-hidden shadow-inner">
+            <div class="flex justify-between items-end border-b-2 border-[#38bdf8] pb-1.5 z-10">
+              <span class="text-2xl font-black font-cyber text-[#0284c7] tracking-wider">${f.state}</span>
+              <span class="text-base font-comic underline text-[#0284c7] font-bold">${f.title}</span>
+            </div>
+            <div class="grid grid-cols-12 gap-3 my-auto items-center z-10">
+              <div class="col-span-5 h-[175px] border-2 border-black rounded-lg overflow-hidden bg-[#38bdf8] relative shadow-sm">
+                ${getPhotoElement('bear')}
+              </div>
+              <div class="col-span-7 space-y-1 text-sm font-bold leading-snug">
+                <div>LN: <span class="text-base font-black">${f.ln}</span></div>
+                <div>FN: <span class="text-base font-black">${f.fn}</span></div>
+                <div>DOB: <span class="text-red-600 font-black text-base">${f.dob}</span></div>
+                <div>H: <b>${f.h}</b> &bull; W: <b>${f.w}</b></div>
+                <!-- Interactive Front Signature Zone -->
+                <div class="border-t border-zinc-300 pt-1">
+                  <span class="text-[8px] font-mono-tech text-zinc-500 block">BEAR SIGNATURE:</span>
+                  <div class="sig-zone w-full h-9 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                </div>
+              </div>
+            </div>
+            <div class="text-[8px] font-mono-tech text-zinc-500 text-center uppercase tracking-wider">
+              STATE OF CALIFORNIA DMV &bull; BEAR STACK TRANSIT
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#fcf9ee] text-[#1c1d1f] p-4 flex flex-col justify-between font-comic border-2 border-zinc-900 rounded-[18px] overflow-hidden shadow-inner">
+            <div class="flex justify-between items-end border-b-2 border-[#38bdf8] pb-1.5 z-10">
+              <span class="text-2xl font-black font-cyber text-[#0284c7] tracking-wider">${f.state}</span>
+              <span class="text-base font-comic underline text-[#0284c7] font-bold">${f.title}</span>
+            </div>
+            <div class="grid grid-cols-12 gap-3 my-auto items-center z-10">
+              <div class="col-span-5 h-[160px] border-2 border-black rounded-lg bg-[#38bdf8] flex items-center justify-center p-2 shadow-sm">
+                <svg class="w-20 h-28" viewBox="0 0 100 130">
+                  <ellipse cx="50" cy="80" rx="36" ry="42" fill="#ffffff" stroke="#000000" stroke-width="3.5" />
+                  <ellipse cx="50" cy="74" rx="16" ry="16" fill="none" stroke="#000000" stroke-width="3.5" />
+                  <ellipse cx="30" cy="30" rx="8" ry="11" fill="none" stroke="#000000" stroke-width="3" />
+                  <ellipse cx="50" cy="24" rx="8" ry="11" fill="none" stroke="#000000" stroke-width="3" />
+                  <ellipse cx="70" cy="30" rx="8" ry="11" fill="none" stroke="#000000" stroke-width="3" />
+                </svg>
+              </div>
+              <div class="col-span-7 flex flex-col justify-between h-[160px]">
+                <div class="text-center">
+                  <div class="font-comic font-bold text-xs text-zinc-700">We</div>
+                  <div class="font-comic font-black text-2xl text-[#ea580c] -mt-1">BARE</div>
+                  <div class="font-comic font-black text-2xl text-zinc-800 -mt-2">BEARS</div>
+                </div>
+                <div class="w-full border-t-2 border-[#0284c7] pt-1">
+                  <span class="text-[7.5px] font-mono-tech text-zinc-500 block">REVERSE AUTHORIZATION:</span>
+                  <div class="sig-zone w-full h-9 bg-white/70 border border-zinc-400 rounded relative overflow-hidden" data-sig-tag="back"></div>
+                </div>
+              </div>
+            </div>
+            <div class="text-[8px] font-mono-tech text-zinc-500 text-center uppercase tracking-wider">
+              OFFICIAL CALIFORNIA BEAR IDENTIFICATION
+            </div>
+          </div>
+        `;
+      }
+      // 7. ALL OTHER CARDS (SOUPASTA, STARK HUD, SHIELD, LOKI TVA)
+      else {
+        cardFront.innerHTML = `
+          <div class="relative w-full h-full bg-[#faf7f2] text-[#111] p-4 flex flex-col justify-between border-2 border-black rounded-[18px] shadow-2xl font-mono-tech">
+            <div class="flex justify-between items-center border-b border-black pb-1">
+              <span class="font-black text-sm uppercase">${currentTemplate.name}</span>
+              <span class="text-xs font-bold text-red-600">${currentTemplate.badge}</span>
+            </div>
+            <div class="grid grid-cols-12 gap-3 my-auto items-center">
+              <div class="col-span-5 h-[155px] border-2 border-black rounded bg-zinc-200 overflow-hidden">
+                ${getPhotoElement('clean')}
+              </div>
+              <div class="col-span-7 space-y-1 text-[10px]">
+                ${Object.keys(f).slice(0, 4).map(k => `<div><span class="text-zinc-500 uppercase text-[8px] block">${k}:</span><b>${f[k]}</b></div>`).join('')}
+                <!-- Interactive Front Signature Zone -->
+                <div class="border-t border-zinc-400 pt-1">
+                  <span class="text-[7.5px] text-zinc-500 block">AUTHORIZED OPERATOR INK:</span>
+                  <div class="sig-zone w-full h-8 relative rounded overflow-hidden" data-sig-tag="front"></div>
+                </div>
+              </div>
+            </div>
+            <div class="border-t border-black pt-1 flex justify-between items-center text-[8px]">
+              <span>AUTHENTICATED REPLICA</span>
+              <span class="font-bold text-zinc-600">${f.sigName || 'APPROVED'}</span>
+            </div>
+          </div>
+        `;
+        cardBack.innerHTML = `
+          <div class="relative w-full h-full bg-[#111218] text-[#e5e7eb] p-4 flex flex-col justify-between border-2 border-zinc-700 rounded-[18px] shadow-2xl font-mono-tech">
+            <div class="flex justify-between items-center border-b border-zinc-700 pb-1 text-[9px] text-zinc-400">
+              <span>${currentTemplate.name} // REVERSE SECURITY</span>
+              <span>300 DPI READY</span>
+            </div>
+            <div class="my-auto text-center">
+              <h2 class="text-3xl font-cyber font-black tracking-widest text-purple-400">${currentTemplate.badge}</h2>
+              <p class="text-[9px] text-zinc-500 mt-1 uppercase">TACTILE REPLICA PROP ARCHIVE</p>
+            </div>
+            <div class="w-full">
+              <span class="text-[8px] text-zinc-400 uppercase block mb-0.5">AUTHORIZATION SIGNATURE:</span>
+              <div class="sig-zone w-full h-11 bg-white/90 border border-zinc-400 rounded relative overflow-hidden" data-sig-tag="back"></div>
+            </div>
+          </div>
+        `;
+      }
+
+      setTimeout(mountActiveSignaturePads, 50);
+    }
+
+    // =========================================================
+    // ROBUST HARDWARE POINTER EVENT SIGNATURE ENGINE
+    // =========================================================
+    function mountActiveSignaturePads() {
+      const zones = document.querySelectorAll('.sig-zone');
+      zones.forEach(zone => {
+        zone.innerHTML = '';
+        const tag = zone.getAttribute('data-sig-tag');
+
+        if (sigMode === 'blank') {
+          zone.innerHTML = `<span class="text-[8px] font-mono-tech text-zinc-500 uppercase tracking-wider flex items-center justify-center h-full">[ SIGN WITH PEN AFTER PRINT ]</span>`;
+          return;
+        }
+
+        if (sigMode === 'type') {
+          zone.innerHTML = `<span class="font-sig text-base sm:text-lg tracking-wider flex items-center justify-center h-full px-2" style="color: ${currentInk}">${typedSignature}</span>`;
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 80;
+        canvas.className = 'w-full h-full block';
+        zone.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        redrawAllStrokes(ctx, canvas.width, canvas.height);
+
+        // HARDWARE POINTER EVENTS (Mobile + Touch + Mouse Unified)
+        function getPointerNormCoords(e) {
+          const rect = canvas.getBoundingClientRect();
+          return {
+            x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+            y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
+          };
+        }
+
+        function pointerDown(e) {
+          if (sigMode !== 'draw') return;
+          e.stopPropagation(); // Stop 3D Card tilt or flip
+          isPointerDrawing = true;
+          canvas.setPointerCapture(e.pointerId);
+
+          const pt = getPointerNormCoords(e);
+          signatureStore[currentTemplate.id].push({
+            x: pt.x,
+            y: pt.y,
+            start: true,
+            color: currentInk,
+            tag: tag
+          });
+
+          ctx.beginPath();
+          ctx.moveTo(pt.x * canvas.width, pt.y * canvas.height);
+        }
+
+        function pointerMove(e) {
+          if (!isPointerDrawing) return;
+          e.stopPropagation();
+          const pt = getPointerNormCoords(e);
+          signatureStore[currentTemplate.id].push({
+            x: pt.x,
+            y: pt.y,
+            start: false,
+            color: currentInk,
+            tag: tag
+          });
+
+          ctx.strokeStyle = currentInk;
+          ctx.lineWidth = 3.2;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
+          ctx.stroke();
+        }
+
+        function pointerUp(e) {
+          if (!isPointerDrawing) return;
+          e.stopPropagation();
+          isPointerDrawing = false;
+          try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
+          // Synchronize strokes across both card faces
+          mountActiveSignaturePads();
+        }
+
+        canvas.addEventListener('pointerdown', pointerDown);
+        canvas.addEventListener('pointermove', pointerMove);
+        canvas.addEventListener('pointerup', pointerUp);
+        canvas.addEventListener('pointercancel', pointerUp);
+      });
+    }
+
+    function redrawAllStrokes(ctx, width, height) {
+      const strokes = signatureStore[currentTemplate.id] || [];
+      if (!ctx || strokes.length === 0) return;
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = 0; i < strokes.length; i++) {
+        const pt = strokes[i];
+        if (pt.start) {
+          ctx.beginPath();
+          ctx.moveTo(pt.x * width, pt.y * height);
+        } else {
+          ctx.strokeStyle = pt.color;
+          ctx.lineWidth = 3.2 * (width / 400);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.lineTo(pt.x * width, pt.y * height);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Controls Form
+    function renderFields() {
+      fieldsContainer.innerHTML = '';
+      const f = currentTemplate.fields;
+      Object.keys(f).forEach(key => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <label class="text-[9px] font-mono-tech text-zinc-500 uppercase block mb-0.5">${key}</label>
+          <input type="text" value="${f[key]}" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-100 font-mono-tech focus:border-purple-500 focus:outline-none">
+        `;
+        const input = div.querySelector('input');
+        input.oninput = (e) => {
+          currentTemplate.fields[key] = e.target.value;
+          renderCardDOM();
+        };
+        fieldsContainer.appendChild(div);
+      });
+    }
+
+    function initPalette() {
+      inkPalette.innerHTML = '';
+      INK_PRESETS.forEach(ink => {
+        const btn = document.createElement('button');
+        btn.style.background = ink.color;
+        btn.className = `w-5 h-5 rounded-full border-2 transition-transform cursor-pointer ${
+          currentInk === ink.color ? 'scale-125 border-white shadow-md' : 'border-zinc-800'
+        }`;
+        btn.title = ink.name;
+        btn.onclick = () => {
+          playSfx('click');
+          currentInk = ink.color;
+          initPalette();
+          mountActiveSignaturePads();
+        };
+        inkPalette.appendChild(btn);
+      });
+    }
+
+    // 3D Tilt Parallax with Pointer Events
+    cardRig.addEventListener('mousemove', (e) => {
+      if (isPointerDrawing) return; // Prevent tilt while signing
+      const rect = cardRig.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const dx = (x - cx) / cx;
+      const dy = (y - cy) / cy;
+      const rx = -dy * 12;
+      const ry = dx * 12 + (isFlipped ? 180 : 0);
+      cardRig.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+
+      const px = Math.round((x / rect.width) * 100);
+      const py = Math.round((y / rect.height) * 100);
+      glareOverlay.style.background = `radial-gradient(circle at ${px}% ${py}%, rgba(255,255,255,0.3) 0%, transparent 60%)`;
+    });
+
+    cardRig.addEventListener('mouseleave', () => {
+      cardRig.style.transform = `rotateX(0deg) rotateY(${isFlipped ? 180 : 0}deg)`;
+      glareOverlay.style.background = 'none';
+    });
+
+    function toggleFlip() {
+      playSfx('flip');
+      isFlipped = !isFlipped;
+      cardRig.style.transform = `rotateX(0deg) rotateY(${isFlipped ? 180 : 0}deg)`;
+      setTimeout(mountActiveSignaturePads, 250);
+    }
+    toolbarFlipBtn.addEventListener('click', toggleFlip);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        toggleFlip();
+      }
+    });
+
+    // Photo Handling
+    photoInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        playSfx('launch');
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          customPhotoUrl = ev.target.result;
+          customPhotoImg = new Image();
+          customPhotoImg.onload = () => renderCardDOM();
+          customPhotoImg.src = customPhotoUrl;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    resetPhotoBtn.addEventListener('click', () => {
+      playSfx('click');
+      customPhotoUrl = null;
+      customPhotoImg = null;
+      renderCardDOM();
+    });
+
+    photoZoomRange.addEventListener('input', (e) => {
+      photoZoom = parseFloat(e.target.value);
+      zoomVal.textContent = photoZoom.toFixed(1);
+      renderCardDOM();
+    });
+
+    photoPanRange.addEventListener('input', (e) => {
+      photoPan = parseInt(e.target.value);
+      panVal.textContent = photoPan;
+      renderCardDOM();
+    });
+
+    // Signature Modes Switcher
+    modeDrawBtn.addEventListener('click', () => {
+      sigMode = 'draw';
+      modeDrawBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech font-bold bg-purple-600 text-white cursor-pointer';
+      modeTypeBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer';
+      modeBlankBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer';
+      drawInkRow.classList.remove('hidden');
+      typeSigRow.classList.add('hidden');
+      mountActiveSignaturePads();
+    });
+
+    modeTypeBtn.addEventListener('click', () => {
+      sigMode = 'type';
+      modeTypeBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech font-bold bg-purple-600 text-white cursor-pointer';
+      modeDrawBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer';
+      modeBlankBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer';
+      drawInkRow.classList.add('hidden');
+      typeSigRow.classList.remove('hidden');
+      mountActiveSignaturePads();
+    });
+
+    modeBlankBtn.addEventListener('click', () => {
+      sigMode = 'blank';
+      modeBlankBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech font-bold bg-purple-600 text-white cursor-pointer';
+      modeDrawBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer';
+      modeTypeBtn.className = 'py-1 px-2 rounded text-[11px] font-mono-tech text-zinc-400 bg-zinc-800 hover:text-zinc-200 cursor-pointer';
+      drawInkRow.classList.add('hidden');
+      typeSigRow.classList.add('hidden');
+      mountActiveSignaturePads();
+    });
+
+    typedSigInput.addEventListener('input', (e) => {
+      typedSignature = e.target.value;
+      mountActiveSignaturePads();
+    });
+
+    clearSigBtn.addEventListener('click', () => {
+      playSfx('click');
+      signatureStore[currentTemplate.id] = [];
+      mountActiveSignaturePads();
+    });
+
+    // =========================================================
+    // 300 DPI COMPOSITOR (PRESERVES SIGNATURES ON EVERY CARD)
+    // =========================================================
+    function drawNativeCardCanvas(isBack = false, scaleFactor = 3.75) {
+      const tmpl = currentTemplate;
+      const f = tmpl.fields;
+      const W = Math.round(tmpl.width * scaleFactor);
+      const H = Math.round(tmpl.height * scaleFactor);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      function drawUserPhoto(px, py, pw, ph) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(px, py, pw, ph);
+        ctx.clip();
+
+        if (customPhotoImg && customPhotoImg.complete) {
+          const natW = customPhotoImg.width;
+          const natH = customPhotoImg.height;
+          const aspect = natW / natH;
+          const frameAspect = pw / ph;
+
+          let dw = pw;
+          let dh = ph;
+          if (aspect > frameAspect) {
+            dh = ph;
+            dw = ph * aspect;
+          } else {
+            dw = pw;
+            dh = pw / aspect;
+          }
+
+          dw *= photoZoom;
+          dh *= photoZoom;
+
+          const dx = px + (pw - dw) / 2;
+          const dy = py + (ph - dh) / 2 + (photoPan * scaleFactor);
+          ctx.drawImage(customPhotoImg, dx, dy, dw, dh);
+        } else {
+          ctx.fillStyle = '#1e2029';
+          ctx.fillRect(px, py, pw, ph);
+          ctx.fillStyle = '#64748b';
+          ctx.beginPath();
+          ctx.arc(px + pw / 2, py + ph * 0.38, ph * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(px + pw / 2, py + ph * 0.85, pw * 0.38, ph * 0.35, 0, Math.PI, 0, true);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawSignatureBox(sx, sy, sw, sh) {
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(sx, sy, sw, sh);
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1 * scaleFactor;
+        ctx.strokeRect(sx, sy, sw, sh);
+
+        const strokes = signatureStore[tmpl.id] || [];
+        if (sigMode === 'draw' && strokes.length > 0) {
+          for (let i = 0; i < strokes.length; i++) {
+            const pt = strokes[i];
+            const rx = sx + pt.x * sw;
+            const ry = sy + pt.y * sh;
+            if (pt.start) {
+              ctx.beginPath();
+              ctx.moveTo(rx, ry);
+            } else {
+              ctx.strokeStyle = pt.color;
+              ctx.lineWidth = 3.2 * (scaleFactor / 3.75);
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+              ctx.lineTo(rx, ry);
+              ctx.stroke();
+            }
+          }
+        } else if (sigMode === 'type') {
+          ctx.fillStyle = currentInk;
+          ctx.font = `italic bold ${Math.round(18 * scaleFactor)}px 'Permanent Marker', cursive`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(typedSignature, sx + sw / 2, sy + sh / 2);
+        } else {
+          ctx.fillStyle = '#64748b';
+          ctx.font = `${Math.round(8 * scaleFactor)}px monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('[ SIGN HERE WITH PEN AFTER PRINT ]', sx + sw / 2, sy + sh / 2);
+        }
+        ctx.restore();
+      }
+
+      // Universal Card Face Canvas Renderer
+      ctx.fillStyle = isBack ? '#111218' : '#fbf7f0';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2 * scaleFactor;
+      ctx.strokeRect(0, 0, W, H);
+
+      if (!isBack) {
+        // Front Face
+        ctx.fillStyle = '#111827';
+        ctx.font = `900 ${Math.round(16 * scaleFactor)}px 'Orbitron', sans-serif`;
+        ctx.fillText(tmpl.name, 20 * scaleFactor, 32 * scaleFactor);
+
+        const px = 20 * scaleFactor;
+        const py = 45 * scaleFactor;
+        const pw = Math.round(W * 0.35);
+        const ph = Math.round(H * 0.65);
+        drawUserPhoto(px, py, pw, ph);
+
+        const rx = pw + 40 * scaleFactor;
+        let ry = 65 * scaleFactor;
+        ctx.font = `bold ${Math.round(10 * scaleFactor)}px monospace`;
+        Object.keys(f).slice(0, 3).forEach(k => {
+          ctx.fillText(`${k.toUpperCase()}: ${f[k]}`, rx, ry);
+          ry += 22 * scaleFactor;
+        });
+
+        // FRONT SIGNATURE BOX
+        ctx.fillStyle = '#64748b';
+        ctx.font = `${Math.round(8 * scaleFactor)}px monospace`;
+        ctx.fillText('AUTHORIZED SIGNATURE:', rx, ry + 15 * scaleFactor);
+        drawSignatureBox(rx, ry + 22 * scaleFactor, W - rx - 25 * scaleFactor, 42 * scaleFactor);
+
+      } else {
+        // Back Face
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `900 ${Math.round(26 * scaleFactor)}px 'Orbitron', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(tmpl.badge, W / 2, H / 2 - 20 * scaleFactor);
+
+        ctx.font = `${Math.round(10 * scaleFactor)}px monospace`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('AUTHENTICATED REPLICA VERIFICATION', W / 2, H / 2 + 10 * scaleFactor);
+
+        // BACK SIGNATURE BOX
+        ctx.textAlign = 'left';
+        ctx.fillText('REVERSE CERTIFICATION SIGNATURE:', 30 * scaleFactor, H - 95 * scaleFactor);
+        drawSignatureBox(30 * scaleFactor, H - 85 * scaleFactor, W - 60 * scaleFactor, 55 * scaleFactor);
+      }
+
+      return canvas;
+    }
+
+    async function saveCanvasDirectly(canvas, filename) {
+      if (navigator.canShare && navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        try {
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+          const file = new File([blob], filename, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: filename });
+            return;
+          }
+        } catch (err) {}
+      }
+
+      const a = document.createElement('a');
+      a.download = filename;
+      a.href = canvas.toDataURL('image/png', 1.0);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    downloadFrontBtn.addEventListener('click', () => {
+      playSfx('launch');
+      const canvas = drawNativeCardCanvas(false, 3.75);
+      saveCanvasDirectly(canvas, `${currentTemplate.id}-front-300dpi.png`);
+    });
+
+    downloadBackBtn.addEventListener('click', () => {
+      playSfx('launch');
+      const canvas = drawNativeCardCanvas(true, 3.75);
+      saveCanvasDirectly(canvas, `${currentTemplate.id}-back-300dpi.png`);
+    });
+
+    downloadPrintSheetBtn.addEventListener('click', () => {
+      playSfx('launch');
+      const frontCanvas = drawNativeCardCanvas(false, 3.0);
+      const backCanvas = drawNativeCardCanvas(true, 3.0);
+
+      const sheet = document.createElement('canvas');
+      sheet.width = 2400;
+      sheet.height = 1800;
+      const ctx = sheet.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, sheet.width, sheet.height);
+
+      const x = (sheet.width - frontCanvas.width) / 2;
+      const y1 = 160;
+      const y2 = y1 + frontCanvas.height + 120;
+
+      ctx.drawImage(frontCanvas, x, y1);
+      ctx.strokeStyle = '#000000';
+      ctx.setLineDash([8, 8]);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y1, frontCanvas.width, frontCanvas.height);
+
+      ctx.drawImage(backCanvas, x, y2);
+      ctx.strokeRect(x, y2, backCanvas.width, backCanvas.height);
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#111111';
+      ctx.font = 'bold 24px monospace';
+      ctx.fillText(`V I B E . e x e // 300 DPI PHYSICAL PRINT PACK: ${currentTemplate.name}`, 120, 80);
+      ctx.font = '14px monospace';
+      ctx.fillStyle = '#666666';
+      ctx.fillText('OFFICIAL ENGINE: @thekartikflow & @73puzzle ~by kartik gupta', 120, 115);
+
+      saveCanvasDirectly(sheet, `${currentTemplate.id}-print-sheet-300dpi.png`);
+    });
+
+    toolbarPrintBtn.addEventListener('click', () => downloadPrintSheetBtn.click());
+
+    window.onload = () => {
+      selectTemplate(TEMPLATES[0]);
+    };
+  </script>
+</body>
+</html>
